@@ -40,6 +40,9 @@ class RequestData(BaseModel):
     nationality: str = "Nigeria"
 
 # === ROUTE: /generate-roadmap ===
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to JapaAdvisor API!"}
 
 @app.post("/generate-roadmap")
 def generate_roadmap(profile: UserProfile):
