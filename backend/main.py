@@ -7,10 +7,10 @@ import json
 from dotenv import load_dotenv
 
 # Scraper imports
-from scrape.requirements import scrape_canada
-from scrape.requirements import scrape_uk
-from scrape.requirements import scrape_germany
-from scrape.requirements import scrape_usa
+from backend.scrape.requirements import scrape_canada
+from backend.scrape.requirements import scrape_uk
+from backend.scrape.requirements import scrape_germany
+from backend.scrape.requirements import scrape_usa
 
 # === ENVIRONMENT SETUP ===
 load_dotenv()
