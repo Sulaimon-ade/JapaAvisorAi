@@ -55,6 +55,7 @@ trio-websocket==0.12.2
 typing-inspection==0.4.1
 typing_extensions==4.14.0
 tzdata==2025.2
+uvicon
 update-checker==0.18.0
 urllib3==2.5.0
 webdriver-manager==4.0.2
