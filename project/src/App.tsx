@@ -32,6 +32,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RoadmapResponse | null>(null);
   const [error, setError] = useState<string>('');
+  const [feedbackText, setFeedbackText] = useState('');
   const [requirements, setRequirements] = useState<any | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -42,41 +43,55 @@ function App() {
     }));
   };
 
+  const isFormValid = Object.values(formData).every(value => value.trim() !== '');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setResult(null);
+    setRequirements(null);
 
     try {
-      const response = await fetch('http://localhost:8000/generate-roadmap', {
+      // First, get the roadmap
+      const response = await fetch('https://japaavisorai.onrender.com/generate-roadmap', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Roadmap error: ${response.status}`);
       const data = await response.json();
       setResult(data);
+
+      // Then, try to get visa requirements
+      const visaRes = await fetch('https://japaavisorai.onrender.com/api/requirements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          country: formData.targetCountry,
+          nationality: 'Nigeria'
+        }),
+      });
+
+      if (visaRes.ok) {
+        const visaData = await visaRes.json();
+        setRequirements(visaData);
+      } else {
+        console.warn('Visa requirements not available');
+      }
     } catch (err) {
+      console.error('Submission error:', err);
       setError('Failed to generate roadmap. Please check your connection and try again.');
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const isFormValid = Object.values(formData).every(value => value.trim() !== '');
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
+      <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
@@ -85,25 +100,25 @@ function App() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">JAPA Pathway Advisor</h1>
           </div>
           <p className="text-gray-600 text-sm md:text-base">
-            Get your personalized AI-powered roadmap to study or work abroad. Made for ambitious Nigerians ready to take the next step.
+            Get your personalized AI-powered roadmap to study or work abroad.
           </p>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Input Form Section */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mb-8">
-          <div className="mb-6">
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">Tell Us About Yourself</h2>
-            <p className="text-gray-600">Fill in your details below and we'll create a customized pathway for your international journey.</p>
-          </div>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Form */}
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">Tell Us About Yourself</h2>
+          <p className="text-gray-600 mb-6">Fill in your details to get a customized pathway for your international journey.</p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <p className="text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 px-4 py-2 rounded-lg mb-4">
+              📌 <strong>Note:</strong> For now, we only cover <strong>UK</strong>, <strong>Canada</strong>, <strong>USA</strong>, and <strong>Germany</strong>. More countries will be added soon!
+            </p>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                 <input
                   type="text"
                   id="fullName"
@@ -111,15 +126,13 @@ function App() {
                   value={formData.fullName}
                   onChange={handleInputChange}
                   placeholder="e.g., Adebayo Ogundimu"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                  className="w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-500"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="degree" className="block text-sm font-medium text-gray-700 mb-2">
-                  Educational Background
-                </label>
+                <label htmlFor="degree" className="block text-sm font-medium text-gray-700 mb-2">Educational Background</label>
                 <input
                   type="text"
                   id="degree"
@@ -127,7 +140,7 @@ function App() {
                   value={formData.degree}
                   onChange={handleInputChange}
                   placeholder="e.g., BSc in Computer Science"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                  className="w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-500"
                   required
                 />
               </div>
@@ -135,9 +148,7 @@ function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="workExperience" className="block text-sm font-medium text-gray-700 mb-2">
-                  Work Experience
-                </label>
+                <label htmlFor="workExperience" className="block text-sm font-medium text-gray-700 mb-2">Work Experience</label>
                 <input
                   type="text"
                   id="workExperience"
@@ -145,15 +156,13 @@ function App() {
                   value={formData.workExperience}
                   onChange={handleInputChange}
                   placeholder="e.g., 3 years backend developer"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                  className="w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-500"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="targetCountry" className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Country
-                </label>
+                <label htmlFor="targetCountry" className="block text-sm font-medium text-gray-700 mb-2">Target Country</label>
                 <input
                   type="text"
                   id="targetCountry"
@@ -161,16 +170,14 @@ function App() {
                   value={formData.targetCountry}
                   onChange={handleInputChange}
                   placeholder="e.g., Canada, UK, Germany"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                  className="w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="goal" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Goal
-              </label>
+              <label htmlFor="goal" className="block text-sm font-medium text-gray-700 mb-2">Your Goal</label>
               <textarea
                 id="goal"
                 name="goal"
@@ -178,7 +185,7 @@ function App() {
                 onChange={handleInputChange}
                 placeholder="e.g., Get MSc in AI, become a researcher, get permanent residency"
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 resize-none"
+                className="w-full px-4 py-3 border rounded-lg text-gray-900 placeholder-gray-500 resize-none"
                 required
               />
             </div>
@@ -200,38 +207,8 @@ function App() {
                 </>
               )}
             </button>
-            <button
-              type="button"
-              onClick={async () => {
-                if (!formData.targetCountry) return;
-                setLoading(true);
-                try {
-                  const res = await fetch('http://localhost:8000/api/requirements', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      country: formData.targetCountry,
-                      nationality: 'Nigeria' // or add a nationality input if you want
-                    }),
-                  });
-                  const data = await res.json();
-                  setRequirements(data);
-                } catch (err) {
-                  console.error('Visa fetch error:', err);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
-            >
-              <Globe className="w-5 h-5" />
-              Get Visa Requirements
-            </button>
-
           </form>
-        </div>
+        </section>
 
         {/* Error Message */}
         {error && (
@@ -243,75 +220,41 @@ function App() {
 
         {/* Results Section */}
         {result && (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Your Personalized Pathway</h2>
-              <p className="text-gray-600">Here's your customized roadmap to achieve your international goals</p>
-            </div>
-
+          <section className="space-y-6">
             {/* Roadmap */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900">Your Roadmap</h3>
-              </div>
-              <div className="prose prose-gray max-w-none">
-                <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
-                  <pre className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed font-sans">
-                    {result.roadmap}
-                  </pre>
-                </div>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3 mb-4">
+                <MapPin className="w-5 h-5 text-blue-600" /> Your Roadmap
+              </h3>
+              <pre className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 text-sm whitespace-pre-wrap">{result.roadmap}</pre>
             </div>
 
             {/* Checklist */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                  <FileCheck2 className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900">Document Checklist</h3>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-                <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                  {Array.isArray(result.checklist) ? (
-                    result.checklist.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))
-                  ) : (
-                    <li>{result.checklist}</li>
-                  )}
-                </ul>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3 mb-4">
+                <FileCheck2 className="w-5 h-5 text-green-600" /> Document Checklist
+              </h3>
+              <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                {result.checklist.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
             </div>
 
             {/* SOP */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900">Statement of Purpose</h3>
-              </div>
-              <div className="prose prose-gray max-w-none">
-                <div className="bg-orange-50 rounded-lg p-4 border-l-4 border-orange-500">
-                  <pre className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed font-sans">
-                    {result.sop}
-                  </pre>
-                </div>
-              </div>
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3 mb-4">
+                <FileText className="w-5 h-5 text-orange-600" /> Statement of Purpose
+              </h3>
+              <pre className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500 text-sm whitespace-pre-wrap">{result.sop}</pre>
             </div>
-            {/* Opportunities Section */}
-            {result?.opportunities && result.opportunities.length > 0 && (
+
+            {/* Opportunities */}
+            {result.opportunities && result.opportunities.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900">Opportunities & Resources</h3>
-                </div>
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3 mb-4">
+                  <Globe className="w-5 h-5 text-purple-600" /> Opportunities & Resources
+                </h3>
                 <ul className="list-disc pl-5 text-sm text-gray-700 space-y-2">
                   {result.opportunities.map((item, idx) => (
                     <li key={idx}>
@@ -323,20 +266,14 @@ function App() {
                 </ul>
               </div>
             )}
+
+            {/* Visa Requirements */}
             {requirements && (
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mt-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Visa Requirements for {requirements.country}
-                </h3>
-                <p className="text-sm text-gray-700 mb-2">
-                  <strong>Visa Type:</strong> {requirements.visa_type}
-                </p>
-                <p className="text-sm text-gray-700 mb-2">
-                  <strong>Language Requirements:</strong> {requirements.language_requirements}
-                </p>
-                <p className="text-sm text-gray-700 mb-2">
-                  <strong>Timeline:</strong> {requirements.timeline}
-                </p>
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Visa Requirements for {requirements.country}</h3>
+                <p className="text-sm text-gray-700 mb-2"><strong>Visa Type:</strong> {requirements.visa_type}</p>
+                <p className="text-sm text-gray-700 mb-2"><strong>Language Requirements:</strong> {requirements.language_requirements}</p>
+                <p className="text-sm text-gray-700 mb-2"><strong>Timeline:</strong> {requirements.timeline}</p>
                 <div className="mb-2">
                   <strong className="text-sm text-gray-700">Required Documents:</strong>
                   <ul className="list-disc pl-5 text-sm text-gray-700 mt-1">
@@ -350,9 +287,7 @@ function App() {
                   <ul className="list-disc pl-5 text-sm text-blue-600 mt-1">
                     {requirements.official_links.map((link: string, idx: number) => (
                       <li key={idx}>
-                        <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                          {link}
-                        </a>
+                        <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">{link}</a>
                       </li>
                     ))}
                   </ul>
@@ -360,29 +295,57 @@ function App() {
               </div>
             )}
 
-            {/* Action CTA */}
+            {/* CTA */}
             <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl p-6 md:p-8 text-white text-center">
               <h3 className="text-xl font-semibold mb-2">Ready to Start Your Journey?</h3>
-              <p className="text-blue-100 mb-4">
-                Take the first step today and begin preparing your documents and applications.
-              </p>
+              <p className="text-blue-100 mb-4">Take the first step today and begin preparing your documents.</p>
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg hover:bg-blue-50 transition-colors duration-200"
+                className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg hover:bg-blue-50 transition"
               >
                 Generate Another Roadmap
               </button>
             </div>
-          </div>
+          </section>
         )}
-      </div>
+        {/* Feedback Section */}
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mt-12">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">We’d Love Your Feedback</h3>
+            <p className="text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 px-4 py-2 rounded-lg mb-4">
+              📌 <strong>Note:</strong> For now, we only cover <strong>UK</strong>, <strong>Canada</strong>, <strong>USA</strong>, and <strong>Germany</strong>. More countries will be added soon!
+            </p>
+
+            <p className="text-gray-600 mb-4">
+              Tell us what’s working, what’s confusing, or what could be better.
+            </p>
+            <textarea
+              id="feedbackMessage"
+              placeholder="Type your feedback or challenges here..."
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 resize-none mb-4"
+              onChange={(e) => setFeedbackText(e.target.value)}
+              value={feedbackText}
+            />
+            <a
+              href={`https://wa.me/2347040082577?text=${encodeURIComponent(
+                `Hello JapaAdvisor! I’ve been using the app and I have some feedback or a challenge I’d like to share:\n\n${feedbackText || ''}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+            >
+              Send via WhatsApp
+            </a>
+          </div>
+        </div>
+
+      </main>
 
       {/* Footer */}
       <footer className="bg-gray-50 border-t border-gray-200 py-8 mt-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-gray-600 text-sm">
-            JAPA Pathway Advisor - Empowering Nigerians to achieve their international dreams
-          </p>
+          <p className="text-gray-600 text-sm">JAPA Pathway Advisor - Empowering Nigerians to achieve their international dreams</p>
         </div>
       </footer>
     </div>
