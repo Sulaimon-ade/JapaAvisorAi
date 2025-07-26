@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
@@ -117,6 +117,24 @@ def fetch_requirements(request: RequestData):
             return scrape_germany()
         else:
             return {"error": f"Scraper not available for '{request.country}' yet."}
+
+    except Exception as e:
+        return {"error": str(e)}
+@app.get("/visa")
+def get_visa_requirements(country: str = Query(...)):
+    try:
+        country = country.strip().lower()
+
+        if country == "canada":
+            return scrape_canada()
+        elif country == "uk" or country == "united kingdom":
+            return scrape_uk()
+        elif country == "usa" or country == "united states":
+            return scrape_usa()
+        elif country == "germany":
+            return scrape_germany()
+        else:
+            return {"error": f"Scraper not available for '{country}' yet."}
 
     except Exception as e:
         return {"error": str(e)}
